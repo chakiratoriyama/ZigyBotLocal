@@ -352,20 +352,26 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const deleted = await interaction.channel.bulkDelete(amount, true);
       await replyE(interaction, { content: `🧹 ${deleted.size} messages supprimés.` });
 
-    } else if (cmd === 'zigy-help') {
-      const embed = new EmbedBuilder()
-        .setTitle('🛠️ Commandes admin Zigy')
-        .setColor(ZIGY_PASTEL_GREEN)
-        .setDescription([
-          '**/reglement** — Affiche le règlement actuel',
-          '**/reglement-set** `text:<règlement>` — Met à jour le règlement et le sauvegarde',
-          '**/message** `channel:#salon` `content:<texte>` — Envoie un message simple',
-          '**/embed** `channel:#salon` `content:<texte>` — Envoie un embed vert pastel',
-          '**/clean** `amount:<1-100>` — Supprime rapidement des messages dans le salon courant',
-        ].join('\n'))
-        .setFooter({ text: 'Accès réservé : Admins + rôles autorisés' });
-      await replyE(interaction, { embeds: [embed] });
-    }
+   } else if (cmd === 'zigy-help') {
+  const embed = new EmbedBuilder()
+    .setTitle('🛠️ Commandes admin Zigy')
+    .setColor(ZIGY_PASTEL_GREEN)
+    .setDescription([
+      '**/reglement** — Affiche le règlement actuel',
+      '**/reglement-set** `text:<règlement>` — Met à jour le règlement et le sauvegarde',
+      '**!reglementset** — Met à jour le règlement (garde les espaces et la mise en page)',
+      '',
+      '**/message** `channel:#salon` `content:<texte>` — Envoie un message simple',
+      '**!message** `#salon texte...` — Envoie un message brut (plus flexible)',
+      '',
+      '**/embed** `channel:#salon` `content:<texte>` — Envoie un embed vert pastel',
+      '**!embed** `#salon texte...` — Envoie un embed avec mise en page libre',
+      '',
+      '**/clean** `amount:<1-100>` — Supprime rapidement des messages dans le salon courant',
+    ].join('\n'))
+    .setFooter({ text: 'Accès réservé : Admins + rôles autorisés' });
+  await replyE(interaction, { embeds: [embed] });
+}
 
   } catch (err) {
     console.error('Erreur commande:', err);
@@ -374,6 +380,64 @@ client.on(Events.InteractionCreate, async (interaction) => {
     } else {
       await replyE(interaction, { content: '❌ Erreur pendant la commande.' });
     }
+  }
+});
+
+// === Commandes préfixées (!reglementset, !message, !embed) ===
+client.on(Events.MessageCreate, async (message) => {
+  if (message.author.bot) return;
+  if (!isAllowed(message.member)) return; // sécurité : seuls les rôles autorisés peuvent
+
+  const args = message.content.trim().split(/ +/);
+  const cmd = args.shift()?.toLowerCase();
+
+  // === !reglementset ===
+  if (cmd === '!reglementset') {
+    const text = message.content.slice('!reglementset'.length).trim();
+    if (!text) return message.reply('⚠️ Merci d’ajouter le texte du règlement après la commande.');
+
+    saveReglement(text);
+    await message.reply('✅ Règlement mis à jour et sauvegardé (espaces conservés).');
+  }
+
+  // === !message ===
+  else if (cmd === '!message') {
+    const mention = args.shift();
+    if (!mention || !mention.startsWith('<#')) {
+      return message.reply('⚠️ Utilisation : `!message #salon votre message ici`');
+    }
+
+    const channelId = mention.replace(/[<#>]/g, '');
+    const channel = message.guild.channels.cache.get(channelId);
+    if (!channel) return message.reply('⚠️ Salon introuvable.');
+
+    const content = args.join(' ');
+    if (!content) return message.reply('⚠️ Merci d’ajouter un contenu après la commande.');
+
+    await channel.send(content);
+    await message.reply(`✅ Message envoyé dans ${channel}.`);
+  }
+
+  // === !embed ===
+  else if (cmd === '!embed') {
+    const mention = args.shift();
+    if (!mention || !mention.startsWith('<#')) {
+      return message.reply('⚠️ Utilisation : `!embed #salon votre texte ici`');
+    }
+
+    const channelId = mention.replace(/[<#>]/g, '');
+    const channel = message.guild.channels.cache.get(channelId);
+    if (!channel) return message.reply('⚠️ Salon introuvable.');
+
+    const content = args.join(' ');
+    if (!content) return message.reply('⚠️ Merci d’ajouter un contenu après la commande.');
+
+    const embed = new EmbedBuilder()
+      .setDescription(content)
+      .setColor(ZIGY_PASTEL_GREEN);
+
+    await channel.send({ embeds: [embed] });
+    await message.reply(`✅ Embed envoyé dans ${channel}.`);
   }
 });
 
