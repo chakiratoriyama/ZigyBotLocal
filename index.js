@@ -362,14 +362,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
       '**!reglementset** — Met à jour le règlement (garde les espaces et la mise en page)',
       '',
       '**/message** `channel:#salon` `content:<texte>` — Envoie un message simple',
-      '**!message** `#salon texte...` — Envoie un message brut (plus flexible)',
+      '**!message** `<ID_du_salon> texte...` — Envoie un message directement en indiquant l’ID du salon (plus fiable, compatible accents)',
       '',
       '**/embed** `channel:#salon` `content:<texte>` — Envoie un embed vert pastel',
-      '**!embed** `#salon texte...` — Envoie un embed avec mise en page libre',
+      '**!embed** `<ID_du_salon> texte...` — Envoie un embed dans le salon avec l’ID spécifié',
       '',
       '**/clean** `amount:<1-100>` — Supprime rapidement des messages dans le salon courant',
     ].join('\n'))
     .setFooter({ text: 'Accès réservé : Admins + rôles autorisés' });
+
   await replyE(interaction, { embeds: [embed] });
 }
 
@@ -395,49 +396,54 @@ client.on(Events.MessageCreate, async (message) => {
   if (cmd === '!reglementset') {
     const text = message.content.slice('!reglementset'.length).trim();
     if (!text) return message.reply('⚠️ Merci d’ajouter le texte du règlement après la commande.');
-
     saveReglement(text);
-    await message.reply('✅ Règlement mis à jour et sauvegardé (espaces conservés).');
+    return message.reply('✅ Règlement mis à jour et sauvegardé (espaces conservés).');
   }
 
   // === !message ===
-  else if (cmd === '!message') {
-    const mention = args.shift();
-    if (!mention || !mention.startsWith('<#')) {
-      return message.reply('⚠️ Utilisation : `!message #salon votre message ici`');
+  if (cmd === '!message') {
+    const channelId = args.shift();
+    if (!channelId) {
+      return message.reply('⚠️ Utilisation : `!message <ID_DU_SALON> votre message ici`');
     }
 
-    const channelId = mention.replace(/[<#>]/g, '');
     const channel = message.guild.channels.cache.get(channelId);
-    if (!channel) return message.reply('⚠️ Salon introuvable.');
+    if (!channel) {
+      return message.reply('⚠️ Salon introuvable. Vérifie que tu as bien mis **l’ID du salon**.');
+    }
 
     const content = args.join(' ');
-    if (!content) return message.reply('⚠️ Merci d’ajouter un contenu après la commande.');
+    if (!content) {
+      return message.reply('⚠️ Merci d’ajouter un contenu après la commande.');
+    }
 
     await channel.send(content);
-    await message.reply(`✅ Message envoyé dans ${channel}.`);
+    return message.reply(`✅ Message envoyé dans le salon <#${channel.id}>.`);
   }
 
   // === !embed ===
-  else if (cmd === '!embed') {
-    const mention = args.shift();
-    if (!mention || !mention.startsWith('<#')) {
-      return message.reply('⚠️ Utilisation : `!embed #salon votre texte ici`');
+  if (cmd === '!embed') {
+    const channelId = args.shift();
+    if (!channelId) {
+      return message.reply('⚠️ Utilisation : `!embed <ID_DU_SALON> votre texte ici`');
     }
 
-    const channelId = mention.replace(/[<#>]/g, '');
     const channel = message.guild.channels.cache.get(channelId);
-    if (!channel) return message.reply('⚠️ Salon introuvable.');
+    if (!channel) {
+      return message.reply('⚠️ Salon introuvable. Vérifie que tu as bien mis **l’ID du salon**.');
+    }
 
     const content = args.join(' ');
-    if (!content) return message.reply('⚠️ Merci d’ajouter un contenu après la commande.');
+    if (!content) {
+      return message.reply('⚠️ Merci d’ajouter un contenu après la commande.');
+    }
 
     const embed = new EmbedBuilder()
       .setDescription(content)
       .setColor(ZIGY_PASTEL_GREEN);
 
     await channel.send({ embeds: [embed] });
-    await message.reply(`✅ Embed envoyé dans ${channel}.`);
+    return message.reply(`✅ Embed envoyé dans le salon <#${channel.id}>.`);
   }
 });
 
