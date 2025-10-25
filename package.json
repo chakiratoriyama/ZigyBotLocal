@@ -1,0 +1,16 @@
+{
+  "name": "zigy-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "license": "ISC",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "canvas": "^3.2.0",
+    "discord.js": "^14.23.2",
+    "dotenv": "^17.2.3",
+    "openai": "^6.6.0"
+  }
+}
